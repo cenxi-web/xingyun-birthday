@@ -5,11 +5,6 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>APOD Birthday Sky</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link
-    href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Space+Grotesk:wght@300;400;600;700&display=swap"
-    rel="stylesheet" />
   <style>
     :root {
       --bg: #07121f;
@@ -21,6 +16,10 @@
       --card: rgba(9, 26, 40, 0.78);
       --stroke: rgba(255, 255, 255, 0.08);
       --shadow: 0 20px 60px rgba(4, 10, 18, 0.45);
+      --font-body: "PingFang SC", "Microsoft YaHei", "Noto Sans CJK SC",
+        "Source Han Sans SC", system-ui, sans-serif;
+      --font-display: "STSong", "Songti SC", "Noto Serif CJK SC",
+        "Source Han Serif SC", serif;
     }
 
     * {
@@ -29,7 +28,7 @@
 
     body {
       margin: 0;
-      font-family: "Space Grotesk", system-ui, sans-serif;
+      font-family: var(--font-body);
       color: var(--text);
       background:
         radial-gradient(circle at 15% 20%, rgba(14, 165, 165, 0.25), transparent 40%),
@@ -76,7 +75,7 @@
 
     h1 {
       margin: 0;
-      font-family: "Instrument Serif", serif;
+      font-family: var(--font-display);
       font-size: clamp(38px, 7vw, 64px);
       font-weight: 400;
     }

@@ -55,6 +55,11 @@ ALLOWED_APOD_FIELDS = [
 ALCHEMY_API_KEY = None
 RESULTS_DICT = dict([])
 NASA_APOD_URL = "https://api.nasa.gov/planetary/apod"
+TRANSLATE_URL = os.environ.get(
+    "TRANSLATE_URL", "https://libretranslate.com/translate"
+)
+TRANSLATE_ENABLED = os.environ.get("TRANSLATE_ENABLED", "true").lower() == "true"
+TRANSLATE_CACHE = {}
 try:
     with open("alchemy_api.key", "r") as f:
         ALCHEMY_API_KEY = f.read()
@@ -329,6 +334,31 @@ def _get_json_for_date_range(start_date, end_date, use_concept_tags, thumbs):
     # return info as JSON
     return jsonify(all_data)
 
+def _translate_to_zh(text: str) -> str:
+    if not text or not TRANSLATE_ENABLED:
+        return text
+    if text in TRANSLATE_CACHE:
+        return TRANSLATE_CACHE[text]
+
+    payload = {
+        "q": text,
+        "source": "en",
+        "target": "zh",
+        "format": "text",
+    }
+    try:
+        response = requests.post(TRANSLATE_URL, data=payload, timeout=15)
+        response.raise_for_status()
+        translated = response.json().get("translatedText")
+        if translated:
+            TRANSLATE_CACHE[text] = translated
+            return translated
+    except requests.RequestException as exc:
+        LOG.warning("Translation failed: %s", exc)
+    except ValueError:
+        LOG.warning("Translation response was not valid JSON.")
+
+    return text
 
 #
 # Endpoints
@@ -433,6 +463,19 @@ def apod_proxy():
         payload = response.json()
     except ValueError:
         payload = {"msg": "Invalid response from NASA API."}
+
+    if (
+        response.status_code == 200
+        and isinstance(payload, dict)
+        and "title" in payload
+        and "explanation" in payload
+    ):
+        original_title = payload.get("title")
+        original_explanation = payload.get("explanation")
+        payload["title_en"] = original_title
+        payload["explanation_en"] = original_explanation
+        payload["title"] = _translate_to_zh(original_title)
+        payload["explanation"] = _translate_to_zh(original_explanation)
 
     return jsonify(payload), response.status_code
 

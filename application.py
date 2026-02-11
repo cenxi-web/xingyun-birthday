@@ -56,7 +56,7 @@ ALCHEMY_API_KEY = None
 RESULTS_DICT = dict([])
 NASA_APOD_URL = "https://api.nasa.gov/planetary/apod"
 TRANSLATE_URL = os.environ.get(
-    "TRANSLATE_URL", "https://libretranslate.com/translate"
+    "TRANSLATE_URL", "https://libretranslate.de/translate"
 )
 TRANSLATE_ENABLED = os.environ.get("TRANSLATE_ENABLED", "true").lower() == "true"
 TRANSLATE_CACHE = {}
@@ -334,27 +334,54 @@ def _get_json_for_date_range(start_date, end_date, use_concept_tags, thumbs):
     # return info as JSON
     return jsonify(all_data)
 
-def _translate_to_zh(text: str) -> str:
-    if not text or not TRANSLATE_ENABLED:
-        return text
-    if text in TRANSLATE_CACHE:
-        return TRANSLATE_CACHE[text]
-
+def _translate_with_libretranslate(text: str) -> str | None:
     payload = {
         "q": text,
         "source": "en",
         "target": "zh",
         "format": "text",
     }
+    response = requests.post(TRANSLATE_URL, data=payload, timeout=15)
+    response.raise_for_status()
+    translated = response.json().get("translatedText")
+    return translated
+
+
+def _translate_with_google(text: str) -> str | None:
+    params = {
+        "client": "gtx",
+        "sl": "en",
+        "tl": "zh-CN",
+        "dt": "t",
+        "q": text,
+    }
+    response = requests.get(
+        "https://translate.googleapis.com/translate_a/single",
+        params=params,
+        timeout=15,
+    )
+    response.raise_for_status()
+    data = response.json()
+    if not data or not isinstance(data, list):
+        return None
+    return "".join(part[0] for part in data[0] if part and part[0])
+
+
+def _translate_to_zh(text: str) -> str:
+    if not text or not TRANSLATE_ENABLED:
+        return text
+    if text in TRANSLATE_CACHE:
+        return TRANSLATE_CACHE[text]
+
     try:
-        response = requests.post(TRANSLATE_URL, data=payload, timeout=15)
-        response.raise_for_status()
-        translated = response.json().get("translatedText")
+        translated = _translate_with_libretranslate(text)
+        if not translated:
+            translated = _translate_with_google(text)
         if translated:
             TRANSLATE_CACHE[text] = translated
             return translated
     except requests.RequestException as exc:
-        LOG.warning("Translation failed: %s", exc)
+        LOG.warning("Translation request failed: %s", exc)
     except ValueError:
         LOG.warning("Translation response was not valid JSON.")
 

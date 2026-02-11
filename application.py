@@ -361,10 +361,60 @@ def _translate_with_google(text: str) -> str | None:
         timeout=15,
     )
     response.raise_for_status()
-    data = response.json()
+    try:
+        data = response.json()
+    except ValueError:
+        LOG.warning(
+            "Google translate response was not JSON (status %s).", response.status_code
+        )
+        return None
     if not data or not isinstance(data, list):
         return None
     return "".join(part[0] for part in data[0] if part and part[0])
+
+
+def _translate_with_mymemory(text: str) -> str | None:
+    params = {
+        "q": text,
+        "langpair": "en|zh-CN",
+    }
+    response = requests.get(
+        "https://api.mymemory.translated.net/get",
+        params=params,
+        timeout=15,
+    )
+    response.raise_for_status()
+    try:
+        data = response.json()
+    except ValueError:
+        LOG.warning(
+            "MyMemory response was not JSON (status %s).", response.status_code
+        )
+        return None
+    translated = data.get("responseData", {}).get("translatedText")
+    return translated or None
+
+
+def _split_text_for_translation(text: str, max_len: int = 2000) -> list[str]:
+    if len(text) <= max_len:
+        return [text]
+    parts = []
+    current = []
+    current_len = 0
+    for sentence in text.replace("\r", " ").split(". "):
+        if not sentence:
+            continue
+        candidate = sentence if sentence.endswith(".") else sentence + "."
+        if current_len + len(candidate) > max_len and current:
+            parts.append(" ".join(current).strip())
+            current = [candidate]
+            current_len = len(candidate)
+        else:
+            current.append(candidate)
+            current_len += len(candidate)
+    if current:
+        parts.append(" ".join(current).strip())
+    return parts if parts else [text]
 
 
 def _translate_to_zh(text: str) -> str:
@@ -374,9 +424,22 @@ def _translate_to_zh(text: str) -> str:
         return TRANSLATE_CACHE[text]
 
     try:
-        translated = _translate_with_libretranslate(text)
-        if not translated:
-            translated = _translate_with_google(text)
+        chunks = _split_text_for_translation(text)
+        translated_chunks = []
+        for chunk in chunks:
+            translated = _translate_with_libretranslate(chunk)
+            if not translated:
+                translated = _translate_with_google(chunk)
+            if not translated:
+                translated = _translate_with_mymemory(chunk)
+            if not translated:
+                translated_chunks = []
+                break
+            translated_chunks.append(translated)
+        if translated_chunks:
+            translated = " ".join(translated_chunks)
+        else:
+            translated = None
         if translated:
             TRANSLATE_CACHE[text] = translated
             return translated

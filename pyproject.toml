@@ -1,0 +1,35 @@
+[project]
+name = "apod-api"
+version = "1.1.0"
+description = "Astronomy Picture of the Day API service"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "beautifulsoup4>=4.14.3",
+    "flask>=3.1.2",
+    "flask-cors>=6.0.2",
+    "gunicorn>=23.0.0",
+    "jinja2>=3.1.6",
+    "pillow>=12.1.0",
+    "requests>=2.32.5",
+    "urllib3>=2.6.3",
+    "werkzeug>=3.1.5",
+]
+
+[dependency-groups]
+dev = [
+    "locust>=2.43.2",
+    "memory-profiler>=0.61.0",
+    "pytest>=9.0.2",
+    "pytest-cov>=7.0.0",
+    "ruff>=0.14.13",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = "test_*.py"
+addopts = "--cov=apod --cov-report=term-missing"
+pythonpath = ["."]
+
+[tool.ruff.lint]
+select = ["I"]

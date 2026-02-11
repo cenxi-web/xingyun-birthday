@@ -1,0 +1,20 @@
+*.pyc
+.project
+.pydevproject
+.coverage
+env/ 
+alchemy_api.key
+# don't include third-party dependencies.
+lib/
+!lib/README.md
+.DS_Store
+.idea/
+apod/__pycache__/
+.elasticbeanstalk/
+*.zip*
+Archive.zip
+venv/
+.venv/
+__pycache__
+.pytest_cache/
+.ruff_cache/

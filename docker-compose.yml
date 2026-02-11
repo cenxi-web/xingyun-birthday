@@ -1,0 +1,7 @@
+services:
+  apod-api:
+    build: .
+    ports:
+      - "5000:5000"
+    environment:
+      - FLASK_ENV=production
